@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Input python command to be submitted as a job
+#
+# This is the supervisor script that finds the signal reconstruction values using a base group to learn shared features
+# and then reconstructing these features for each individual specified in the reconstruction group
+# 
+#
+#SBATCH --output=Supervisor_SigRecon-%j.out
+#SBATCH -p long
+#SBATCH -t 12:59:00
+#SBATCH --mem 100G
+
+# Source the environment
+./source_environment.sh
+
+# These are the default variables that were used in the main analyses
+base_group='adults' # Which group will be the baseline? (e.g., 'adults')
+recon_group='all_children' # Which group will be reconstructed? (e.g., 'all_children'; if same as baseline, we will create a baseline)
+feats='10' # How many features for running SRM?  (must be an integer in quotes, e.g., '10')
+trainset='original' # Which training order are you using ('original' or 'swapped')
+combine='yes' # Are you combining features or reconstructing each feature individually? (yes or no)
+
+
+# Tell them what they are doing
+if [ base_group = recon_group ]
+then
+    echo 'Performing the baseline analysis on ${base_group} using ${feats} features (combining across features = ${combine}) in the ${trainset} training order'
+else
+    echo 'Reconstructing ${feats} features learned with ${base_group} on ${recon_group} (combining across features = ${combine}) in the ${trainset} training order'
+fi
+
+# For whatever the recon_group is, find the list of subjects, and import this
+recon_subjects=cat `participant_info/${recon_group}_participants_final.txt`
+
+for subj in ${recon_subjects[@]}
+do
+    echo 'Analyzing ${subj}'
+    sbatch ./scripts/run_sigrecon.sh $base_group $subj $feats $trainset $combine
+done
+
+
+
